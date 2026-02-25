@@ -138,6 +138,30 @@ def admin_add(message):
 
     add_paid(user_id, amount)
     bot.reply_to(message, f"{amount} ta pullik limit qo‘shildi.")
+    # ===== ADMIN STATS =====
+@bot.message_handler(commands=['stats'])
+def admin_stats(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    cursor.execute("SELECT COUNT(*) FROM users")
+    total_users = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM users WHERE paid_remaining > 0")
+    premium_users = cursor.fetchone()[0]
+
+    cursor.execute("SELECT SUM(used) FROM users")
+    total_used = cursor.fetchone()[0] or 0
+
+    bot.reply_to(
+        message,
+        f"""📊 BOT STATISTIKA
+
+👥 Jami user: {total_users}
+💎 Premium user: {premium_users}
+🖼 Jami ishlatilgan rasm: {total_used}
+"""
+    )
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
