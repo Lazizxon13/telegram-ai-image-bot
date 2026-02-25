@@ -1,224 +1,19 @@
 import os
-import base64
-import sqlite3
-from io import BytesIO
 from flask import Flask, request
 import telebot
-from openai import OpenAI
 
-# ===== ENV VARIABLES =====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_KEY")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN not found")
 
-if not OPENAI_KEY:
-    raise ValueError("OPENAI_KEY not found")
-
-if not WEBHOOK_URL:
-    raise ValueError("WEBHOOK_URL not found")
-
-# ===== INIT =====
 bot = telebot.TeleBot(BOT_TOKEN)
-client = OpenAI(api_key=OPENAI_KEY)
 app = Flask(__name__)
 
-
-# ===== DATABASE =====
-conn = sqlite3.connect("users.db", check_same_thread=False)
-cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY,
-    used INTEGER DEFAULT 0,
-    paid_remaining INTEGER DEFAULT 0
-)
-""")
-conn.commit()
-
-FREE_LIMIT = 5
-
-# ===== LIMIT CHECK =====
-def check_limit(user_id):
-    cursor.execute(
-        "SELECT used, paid_remaining FROM users WHERE user_id=?",
-        (user_id,)
-    )
-    row = cursor.fetchone()
-
-    if row is None:
-        cursor.execute(
-            "INSERT INTO users (user_id, used, paid_remaining) VALUES (?, ?, ?)",
-            (user_id, 1, 0)
-        )
-        conn.commit()
-        return True, FREE_LIMIT - 1
-
-    used, paid_remaining = row
-
-    # Paid limit
-    if paid_remaining > 0:
-        cursor.execute(
-            "UPDATE users SET paid_remaining=? WHERE user_id=?",
-            (paid_remaining - 1, user_id)
-        )
-        conn.commit()
-        return True, paid_remaining - 1
-
-    # Free limit
-    if used >= FREE_LIMIT:
-        return False, 0
-
-    cursor.execute(
-        "UPDATE users SET used=? WHERE user_id=?",
-        (used + 1, user_id)
-    )
-    conn.commit()
-
-    return True, FREE_LIMIT - (used + 1)
-
-# ===== ADD PAID =====
-def add_paid(user_id, amount):
-    cursor.execute(
-        "SELECT user_id FROM users WHERE user_id=?",
-        (user_id,)
-    )
-    row = cursor.fetchone()
-
-    if row is None:
-        cursor.execute(
-            "INSERT INTO users (user_id, used, paid_remaining) VALUES (?, ?, ?)",
-            (user_id, 0, amount)
-        )
-    else:
-        cursor.execute(
-            "UPDATE users SET paid_remaining = paid_remaining + ? WHERE user_id=?",
-            (amount, user_id)
-        )
-
-    conn.commit()
-
-# ===== STYLES =====
-STYLES = {
-    "anime": "Anime style, vibrant colors, detailed illustration, 4k",
-    "realistic": "Ultra realistic photography, cinematic lighting, sharp focus, professional camera, 4k",
-    "logo": "Modern minimal logo design, vector style, clean background",
-    "3d": "3D render, octane render, hyper detailed, dramatic lighting"
-}
-
-user_styles = {}
-
-# ===== START =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.reply_to(
-        message,
-        "🎨 Salom!\n\n"
-        "Menga rasm tavsifini yuboring.\n\n"
-        "Style komandalar:\n"
-        "/anime\n"
-        "/realistic\n"
-        "/logo\n"
-        "/3d\n\n"
-        "Sizda 5 ta bepul rasm limiti bor."
-    )
+    bot.reply_to(message, "Bot ishlayapti 🚀")
 
-# ===== STYLE =====
-@bot.message_handler(commands=['anime','realistic','logo','3d'])
-def set_style(message):
-    style = message.text.replace("/", "")
-    user_styles[message.chat.id] = style
-    bot.reply_to(message, f"✅ {style.upper()} style tanlandi.")
-
-# ===== ADMIN =====
-ADMIN_ID = 601900410
-
-@bot.message_handler(commands=['add'])
-def admin_add(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    parts = message.text.split()
-    if len(parts) != 3:
-        bot.reply_to(message, "Format: /add user_id amount")
-        return
-
-    user_id = int(parts[1])
-    amount = int(parts[2])
-
-    add_paid(user_id, amount)
-    bot.reply_to(message, f"{amount} ta premium limit qo‘shildi.")
-
-@bot.message_handler(commands=['stats'])
-def admin_stats(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    cursor.execute("SELECT COUNT(*) FROM users")
-    total_users = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM users WHERE paid_remaining > 0")
-    premium_users = cursor.fetchone()[0]
-
-    cursor.execute("SELECT SUM(used) FROM users")
-    total_used = cursor.fetchone()[0] or 0
-
-    bot.reply_to(
-        message,
-        f"""📊 BOT STATISTIKA
-
-👥 Jami user: {total_users}
-💎 Premium user: {premium_users}
-🖼 Jami ishlatilgan rasm: {total_used}
-"""
-    )
-
-# ===== IMAGE =====
-@bot.message_handler(content_types=['text'])
-def generate_image(message):
-    user_id = message.from_user.id
-
-    allowed, remaining = check_limit(user_id)
-
-    if not allowed:
-        bot.reply_to(
-            message,
-            "❌ Bepul limit tugadi.\nPremium olish uchun admin bilan bog'laning."
-        )
-        return
-
-    style = user_styles.get(message.chat.id)
-    base_prompt = message.text
-
-    if style in STYLES:
-        final_prompt = STYLES[style] + ". " + base_prompt
-    else:
-        final_prompt = "Ultra high quality, detailed, professional lighting. " + base_prompt
-
-    try:
-        response = client.images.generate(
-            model="gpt-image-1",
-            prompt=final_prompt,
-            size="512x512"
-        )
-
-        image_base64 = response.data[0].b64_json
-        image_bytes = base64.b64decode(image_base64)
-
-        bot.send_photo(
-            message.chat.id,
-            BytesIO(image_bytes),
-            caption=f"✨ Qolgan limit: {remaining}"
-        )
-
-    except Exception as e:
-        bot.reply_to(message, "⚠️ Rasm yaratishda xatolik yuz berdi.")
-        print(e)
-
-# ===== WEBHOOK ROUTE =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
     json_string = request.get_data().decode("utf-8")
@@ -226,10 +21,9 @@ def webhook():
     bot.process_new_updates([update])
     return "OK", 200
 
-# ===== HEALTH CHECK =====
 @app.route("/")
 def home():
-    return "Bot is running", 200
+    return "OK", 200
 
 @app.route("/health")
 def health():
