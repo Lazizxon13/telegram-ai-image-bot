@@ -68,6 +68,26 @@ def check_limit(user_id):
     conn.commit()
 
     return True, FREE_LIMIT - (used + 1)
+    # ===== PAID LIMIT FUNCTION =====
+def add_paid(user_id, amount):
+    cursor.execute(
+        "SELECT user_id FROM users WHERE user_id=?",
+        (user_id,)
+    )
+    row = cursor.fetchone()
+
+    if row is None:
+        cursor.execute(
+            "INSERT INTO users (user_id, used, paid_remaining) VALUES (?, ?, ?)",
+            (user_id, 0, amount)
+        )
+    else:
+        cursor.execute(
+            "UPDATE users SET paid_remaining = paid_remaining + ? WHERE user_id=?",
+            (amount, user_id)
+        )
+
+    conn.commit()
 # ===== STYLE PROMPTS =====
 STYLES = {
     "anime": "Anime style, vibrant colors, detailed illustration, 4k, studio quality",
