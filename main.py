@@ -32,19 +32,32 @@ FREE_LIMIT = 2
 
 # ===== LIMIT CHECK FUNCTION =====
 def check_limit(user_id):
-    cursor.execute("SELECT used FROM users WHERE user_id=?", (user_id,))
+    cursor.execute(
+        "SELECT used, paid_remaining FROM users WHERE user_id=?",
+        (user_id,)
+    )
     row = cursor.fetchone()
 
     if row is None:
         cursor.execute(
-            "INSERT INTO users (user_id, used) VALUES (?, ?)",
-            (user_id, 1)
+            "INSERT INTO users (user_id, used, paid_remaining) VALUES (?, ?, ?)",
+            (user_id, 1, 0)
         )
         conn.commit()
         return True, FREE_LIMIT - 1
 
-    used = row[0]
+    used, paid_remaining = row
 
+    # Agar pullik balans bo‘lsa
+    if paid_remaining > 0:
+        cursor.execute(
+            "UPDATE users SET paid_remaining=? WHERE user_id=?",
+            (paid_remaining - 1, user_id)
+        )
+        conn.commit()
+        return True, paid_remaining - 1
+
+    # Bepul limit tekshiruv
     if used >= FREE_LIMIT:
         return False, 0
 
@@ -55,7 +68,6 @@ def check_limit(user_id):
     conn.commit()
 
     return True, FREE_LIMIT - (used + 1)
-
 # ===== STYLE PROMPTS =====
 STYLES = {
     "anime": "Anime style, vibrant colors, detailed illustration, 4k, studio quality",
