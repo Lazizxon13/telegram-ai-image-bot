@@ -119,7 +119,25 @@ def set_style(message):
     style = message.text.replace("/", "")
     user_styles[message.chat.id] = style
     bot.reply_to(message, f"✅ {style.upper()} style tanlandi. Endi tavsif yuboring.")
+# ===== ADMIN COMMAND =====
+ADMIN_ID = 601900410 # o'zingizning Telegram ID
 
+@bot.message_handler(commands=['add'])
+def admin_add(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    parts = message.text.split()
+
+    if len(parts) != 3:
+        bot.reply_to(message, "Format: /add user_id amount")
+        return
+
+    user_id = int(parts[1])
+    amount = int(parts[2])
+
+    add_paid(user_id, amount)
+    bot.reply_to(message, f"{amount} ta pullik limit qo‘shildi.")
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
