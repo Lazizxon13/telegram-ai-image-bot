@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-FREE_LIMIT = 5
+FREE_LIMIT = 2
 
 # ===== LIMIT CHECK FUNCTION =====
 def check_limit(user_id):
@@ -114,7 +114,7 @@ def generate_image(message):
         response = client.images.generate(
             model="gpt-image-1",
             prompt=final_prompt,
-            size="1024x1024"
+           size="512x512"
         )
 
         image_base64 = response.data[0].b64_json
