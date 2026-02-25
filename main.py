@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 # ===== USER LIMIT SYSTEM =====
 user_limits = {}
-FREE_LIMIT = 5
+FREE_LIMIT = 2
 
 def check_limit(user_id):
     if user_id not in user_limits:
