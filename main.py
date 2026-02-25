@@ -230,3 +230,7 @@ def webhook():
 @app.route("/")
 def home():
     return "Bot is running", 200
+
+@app.route("/health")
+def health():
+    return "OK", 200
