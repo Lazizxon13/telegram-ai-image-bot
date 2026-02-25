@@ -95,15 +95,3 @@ def generate_image(message):
         caption=f"✨ Qolgan bepul limit: {remaining}"
     )
 
-# ===== WEBHOOK =====
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def webhook():
-    json_string = request.get_data().decode("utf-8")
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "OK", 200
-
-if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.set_webhook(url=WEBHOOK_URL + "/" + BOT_TOKEN)
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
