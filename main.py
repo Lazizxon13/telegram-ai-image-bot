@@ -10,8 +10,18 @@ OPENAI_KEY = os.getenv("OPENAI_KEY")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 bot = telebot.TeleBot(BOT_TOKEN)
-client = OpenAI(api_key=OPENAI_KEY)
+client = OpenAI(api_key=OPENAI_KEY) 
+# ===== DATABASE SETUP =====
+conn = sqlite3.connect("users.db", check_same_thread=False)
+cursor = conn.cursor()
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER PRIMARY KEY,
+    used INTEGER DEFAULT 0
+)
+""")
+conn.commit()
 app = Flask(__name__)
 
 # ===== USER LIMIT SYSTEM =====
@@ -19,13 +29,22 @@ user_limits = {}
 FREE_LIMIT = 2
 
 def check_limit(user_id):
-    if user_id not in user_limits:
-        user_limits[user_id] = 0
-    
-    if user_limits[user_id] >= FREE_LIMIT:
+    cursor.execute("SELECT used FROM users WHERE user_id=?", (user_id,))
+used_now = cursor.fetchone()[0]
+remaining = FREE_LIMIT - used_now
+
+    if row is None:
+        cursor.execute("INSERT INTO users (user_id, used) VALUES (?, ?)", (user_id, 1))
+        conn.commit()
+        return True
+
+    used = row[0]
+
+    if used >= FREE_LIMIT:
         return False
-    
-    user_limits[user_id] += 1
+
+    cursor.execute("UPDATE users SET used=? WHERE user_id=?", (used + 1, user_id))
+    conn.commit()
     return True
 
 # ===== STYLE PROMPTS =====
