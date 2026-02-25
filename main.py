@@ -1,4 +1,4 @@
-import telebot
+import sqlite3
 from openai import OpenAI
 import os
 import base64
