@@ -26,7 +26,7 @@ app = Flask(__name__)
 
 # ===== USER LIMIT SYSTEM =====
 user_limits = {}
-FREE_LIMIT = 2
+FREE_LIMIT = 3
 
 def check_limit(user_id):
     cursor.execute("SELECT used FROM users WHERE user_id=?", (user_id,))
@@ -34,7 +34,10 @@ used_now = cursor.fetchone()[0]
 remaining = FREE_LIMIT - used_now
 
     if row is None:
-        cursor.execute("INSERT INTO users (user_id, used) VALUES (?, ?)", (user_id, 1))
+        cursor.execute(
+            "INSERT INTO users (user_id, used) VALUES (?, ?)",
+            (user_id, 1)
+        )
         conn.commit()
         return True
 
@@ -43,7 +46,10 @@ remaining = FREE_LIMIT - used_now
     if used >= FREE_LIMIT:
         return False
 
-    cursor.execute("UPDATE users SET used=? WHERE user_id=?", (used + 1, user_id))
+    cursor.execute(
+        "UPDATE users SET used=? WHERE user_id=?",
+        (used + 1, user_id)
+    )
     conn.commit()
     return True
 
