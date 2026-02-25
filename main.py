@@ -9,19 +9,27 @@ from openai import OpenAI
 # ===== ENV VARIABLES =====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN not found in environment variables")
+    raise ValueError("BOT_TOKEN not found")
 
 if not OPENAI_KEY:
-    raise ValueError("OPENAI_KEY not found in environment variables")
+    raise ValueError("OPENAI_KEY not found")
+
+if not WEBHOOK_URL:
+    raise ValueError("WEBHOOK_URL not found")
 
 # ===== INIT =====
 bot = telebot.TeleBot(BOT_TOKEN)
 client = OpenAI(api_key=OPENAI_KEY)
 app = Flask(__name__)
 
-# ===== DATABASE SETUP =====
+# ===== SET WEBHOOK (Gunicorn compatible) =====
+bot.remove_webhook()
+bot.set_webhook(url=f"{WEBHOOK_URL}/{BOT_TOKEN}")
+
+# ===== DATABASE =====
 conn = sqlite3.connect("users.db", check_same_thread=False)
 cursor = conn.cursor()
 
@@ -35,9 +43,8 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 FREE_LIMIT = 5
-ADMIN_ID = 601900410  # <-- o'zingizning ID
 
-# ===== LIMIT CHECK FUNCTION =====
+# ===== LIMIT CHECK =====
 def check_limit(user_id):
     cursor.execute(
         "SELECT used, paid_remaining FROM users WHERE user_id=?",
@@ -55,7 +62,7 @@ def check_limit(user_id):
 
     used, paid_remaining = row
 
-    # Pullik balans bo‘lsa
+    # Paid limit
     if paid_remaining > 0:
         cursor.execute(
             "UPDATE users SET paid_remaining=? WHERE user_id=?",
@@ -64,7 +71,7 @@ def check_limit(user_id):
         conn.commit()
         return True, paid_remaining - 1
 
-    # Bepul limit
+    # Free limit
     if used >= FREE_LIMIT:
         return False, 0
 
@@ -76,7 +83,7 @@ def check_limit(user_id):
 
     return True, FREE_LIMIT - (used + 1)
 
-# ===== ADD PAID LIMIT =====
+# ===== ADD PAID =====
 def add_paid(user_id, amount):
     cursor.execute(
         "SELECT user_id FROM users WHERE user_id=?",
@@ -97,17 +104,17 @@ def add_paid(user_id, amount):
 
     conn.commit()
 
-# ===== STYLE PROMPTS =====
+# ===== STYLES =====
 STYLES = {
     "anime": "Anime style, vibrant colors, detailed illustration, 4k",
     "realistic": "Ultra realistic photography, cinematic lighting, sharp focus, professional camera, 4k",
-    "logo": "Modern minimal logo design, vector style, clean background, branding",
+    "logo": "Modern minimal logo design, vector style, clean background",
     "3d": "3D render, octane render, hyper detailed, dramatic lighting"
 }
 
 user_styles = {}
 
-# ===== START COMMAND =====
+# ===== START =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.reply_to(
@@ -119,24 +126,25 @@ def start_message(message):
         "/realistic\n"
         "/logo\n"
         "/3d\n\n"
-        f"Sizda {FREE_LIMIT} ta bepul rasm limiti bor."
+        "Sizda 5 ta bepul rasm limiti bor."
     )
 
-# ===== STYLE COMMANDS =====
+# ===== STYLE =====
 @bot.message_handler(commands=['anime','realistic','logo','3d'])
 def set_style(message):
     style = message.text.replace("/", "")
     user_styles[message.chat.id] = style
-    bot.reply_to(message, f"✅ {style.upper()} style tanlandi. Endi tavsif yuboring.")
+    bot.reply_to(message, f"✅ {style.upper()} style tanlandi.")
 
-# ===== ADMIN ADD =====
+# ===== ADMIN =====
+ADMIN_ID = 601900410
+
 @bot.message_handler(commands=['add'])
 def admin_add(message):
     if message.from_user.id != ADMIN_ID:
         return
 
     parts = message.text.split()
-
     if len(parts) != 3:
         bot.reply_to(message, "Format: /add user_id amount")
         return
@@ -145,9 +153,8 @@ def admin_add(message):
     amount = int(parts[2])
 
     add_paid(user_id, amount)
-    bot.reply_to(message, f"{amount} ta pullik limit qo‘shildi.")
+    bot.reply_to(message, f"{amount} ta premium limit qo‘shildi.")
 
-# ===== ADMIN STATS =====
 @bot.message_handler(commands=['stats'])
 def admin_stats(message):
     if message.from_user.id != ADMIN_ID:
@@ -172,20 +179,17 @@ def admin_stats(message):
 """
     )
 
-# ===== IMAGE GENERATION =====
+# ===== IMAGE =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
-
-    if message.text.startswith("/"):
-        return
-
     user_id = message.from_user.id
+
     allowed, remaining = check_limit(user_id)
 
     if not allowed:
         bot.reply_to(
             message,
-            "❌ Limit tugadi.\nPremium olish uchun admin bilan bog'laning."
+            "❌ Bepul limit tugadi.\nPremium olish uchun admin bilan bog'laning."
         )
         return
 
@@ -217,7 +221,7 @@ def generate_image(message):
         bot.reply_to(message, "⚠️ Rasm yaratishda xatolik yuz berdi.")
         print(e)
 
-# ===== WEBHOOK =====
+# ===== WEBHOOK ROUTE =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
     json_string = request.get_data().decode("utf-8")
@@ -225,6 +229,7 @@ def webhook():
     bot.process_new_updates([update])
     return "OK", 200
 
+# ===== HEALTH CHECK =====
 @app.route("/")
 def home():
     return "Bot is running", 200
