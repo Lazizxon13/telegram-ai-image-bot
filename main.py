@@ -25,9 +25,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 client = OpenAI(api_key=OPENAI_KEY)
 app = Flask(__name__)
 
-# ===== SET WEBHOOK (Gunicorn compatible) =====
-bot.remove_webhook()
-bot.set_webhook(url=f"{WEBHOOK_URL}/{BOT_TOKEN}")
 
 # ===== DATABASE =====
 conn = sqlite3.connect("users.db", check_same_thread=False)
