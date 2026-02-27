@@ -106,7 +106,37 @@ def start_message(message):
         "1 ta bepul rasm beriladi.\n"
         "Premium olish uchun admin bilan bog'laning."
     )
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+@bot.message_handler(commands=['buy'])
+def buy_menu(message):
+    markup = InlineKeyboardMarkup()
+
+    btn1 = InlineKeyboardButton("💎 5 rasm — 10 000 so‘m", callback_data="buy_5")
+    btn2 = InlineKeyboardButton("💎 20 rasm — 30 000 so‘m", callback_data="buy_20")
+
+    markup.add(btn1)
+    markup.add(btn2)
+
+    bot.send_message(
+        message.chat.id,
+        "💎 Premium paketni tanlang:",
+        reply_markup=markup
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("buy_"))
+def handle_buy(call):
+
+    if call.data == "buy_5":
+        text = "💎 5 ta rasm — 10 000 so‘m\n\nTo‘lov uchun admin bilan bog‘laning."
+    elif call.data == "buy_20":
+        text = "💎 20 ta rasm — 30 000 so‘m\n\nTo‘lov uchun admin bilan bog‘laning."
+    else:
+        text = "Xatolik."
+
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, text)
 # ===== ADMIN ADD =====
 @bot.message_handler(commands=['add'])
 def admin_add(message):
