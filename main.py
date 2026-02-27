@@ -199,7 +199,7 @@ def generate_image(message):
         caption_text = ""
 
         if remaining > 0:
-            caption_text = f"💎 Qolgan premium: {remaining} ta"
+            caption_text = f"✨ Rasm tayyor!\n💎 Qolgan premium: {remaining} ta"
 
         bot.send_photo(
             message.chat.id,
