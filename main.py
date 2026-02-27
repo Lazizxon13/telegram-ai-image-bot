@@ -11,16 +11,14 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN topilmadi. .env faylini tekshiring.")
-
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY topilmadi.")
+if not BOT_TOKEN or not OPENAI_API_KEY:
+    raise ValueError("BOT_TOKEN yoki OPENAI_API_KEY topilmadi. .env faylini tekshiring.")
 
 # ===== SETTINGS =====
 FREE_LIMIT = 1
 ADMIN_ID = 601900410
-CHANNEL_USERNAME = "@GreenleafRishton"   # 🔥 To'g'rilandi: API ishlashi uchun @username formatiga o'tkazildi
+CHANNEL_USERNAME = "@GreenleafRishton" # API ishlashi uchun @ formatida
+CHANNEL_LINK = "https://t.me/GreenleafRishton" # Tugmalar uchun havola
 
 # ===== INIT =====
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -28,11 +26,9 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 app = Flask(__name__)
 
 # ===== DATABASE HELPER =====
-# 🔥 Flask'da "database is locked" xatosini oldini olish uchun har ulanishda yopilib-ochiladigan funksiya
 def get_db_connection():
     return sqlite3.connect("users.db", check_same_thread=False)
 
-# Bazani boshlang'ich sozlash
 with get_db_connection() as conn:
     conn.execute("""
     CREATE TABLE IF NOT EXISTS users (
@@ -89,7 +85,7 @@ def check_limit(user_id):
 
         return True, 0
 
-# ===== ADMIN COMMAND (Yangi: Adminlar premium qo'shishi uchun) =====
+# ===== ADMIN COMMAND =====
 @bot.message_handler(commands=['add_premium'])
 def add_premium_cmd(message):
     if message.from_user.id != ADMIN_ID:
@@ -121,13 +117,13 @@ def add_premium_cmd(message):
             
         bot.reply_to(message, f"✅ Foydalanuvchi {target_id} hisobiga {amount} ta premium rasm qo'shildi.")
         try:
-            bot.send_message(target_id, f"🎉 Admin tomonidan sizga {amount} ta premium rasm taqdim etildi!")
+            bot.send_message(target_id, f"🎉 Admin tomonidan sizga {amount} ta premium rasm taqdim etildi! Endi rasm chizdirishingiz mumkin.")
         except:
             pass
     except Exception as e:
         bot.reply_to(message, f"Xatolik yuz berdi: {e}")
 
-# ===== START =====
+# ===== START COMMAND =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
     args = message.text.split()
@@ -144,7 +140,7 @@ def start_message(message):
                 try:
                     invited_by = int(args[1])
                 except:
-                    invited_by = None
+                    pass
 
             cursor.execute(
                 "INSERT INTO users (user_id, used, paid_remaining, invited_by) VALUES (?, ?, ?, ?)",
@@ -166,19 +162,75 @@ def start_message(message):
                 except:
                     pass
 
-    bot_username = bot.get_me().username
+    try:
+        bot_username = bot.get_me().username
+    except:
+        bot_username = "bot_username"
+
     bot.reply_to(
         message,
         f"🎨 Salom!\n\n"
-        f"Sizga {FREE_LIMIT} ta bepul rasm yaratish imkoniyati beriladi.\n\n"
-        f"🔗 Do'stlaringizni taklif qilib premium oling. Referal havolangiz:\n"
-        f"https://t.me/{bot_username}?start={user_id}"
+        f"Sizga {FREE_LIMIT} ta bepul rasm yaratish imkoniyati berildi.\n\n"
+        f"🎁 **Yana bepul limit kerakmi?**\n"
+        f"Do'stlaringizni taklif qiling va har bir do'stingiz uchun 1 tadan bonus rasm oling.\n"
+        f"🔗 Referal havolangiz:\n"
+        f"https://t.me/{bot_username}?start={user_id}\n\n"
+        f"💎 **Kutishni xohlamaysizmi?**\n"
+        f"Pullik paketlarni ko'rish uchun /premium buyrug'ini yuboring."
     )
+
+# ===== PREMIUM & BUY COMMANDS =====
+@bot.message_handler(commands=['premium', 'buy'])
+def buy_premium(message):
+    markup = InlineKeyboardMarkup()
+    btn1 = InlineKeyboardButton("💎 5 rasm — 10 000 so'm", callback_data="buy_5")
+    btn2 = InlineKeyboardButton("💎 20 rasm — 30 000 so'm", callback_data="buy_20")
+    
+    markup.add(btn1)
+    markup.add(btn2)
+    
+    bot.send_message(
+        message.chat.id, 
+        "💎 Premium paketni tanlang:", 
+        reply_markup=markup
+    )
+
+# ===== CALLBACK QUERIES (Tugmalar bosilganda) =====
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callbacks(call):
+    user_id = call.from_user.id
+
+    # Obunani tekshirish tugmasi
+    if call.data == "check_sub":
+        if check_subscription(user_id):
+            bot.answer_callback_query(call.id, "✅ A’zolik tasdiqlandi!")
+            bot.send_message(call.message.chat.id, "🎉 Endi botga rasm chizish uchun matn yozishingiz mumkin!")
+        else:
+            bot.answer_callback_query(call.id, "❌ Hali kanalga a’zo emassiz.", show_alert=True)
+
+    # To'lov tugmalari
+    elif call.data == "buy_5":
+        text = (
+            "💎 5 ta rasm — 10 000 so'm\n\n"
+            "To'lov uchun admin bilan bog'laning: @SizningYuzerneyingiz"
+        )
+        bot.send_message(call.message.chat.id, text)
+        bot.answer_callback_query(call.id)
+
+    elif call.data == "buy_20":
+        text = (
+            "💎 20 ta rasm — 30 000 so'm\n\n"
+            "💳 Karta: 8600 1234 5678 9012\n"
+            "👤 Ism: ORIBJON\n\n"
+            "To'lov qilgandan so'ng chekni shu yerga yuboring.\n"
+            f"🆔 Sizning ID: {user_id}"
+        )
+        bot.send_message(call.message.chat.id, text)
+        bot.answer_callback_query(call.id)
 
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
-    # 🔥 Komandalar kelganda adashib API ga so'rov ketmasligi uchun
     if message.text.startswith('/'):
         return
 
@@ -186,10 +238,7 @@ def generate_image(message):
 
     if not check_subscription(user_id):
         markup = InlineKeyboardMarkup()
-        btn1 = InlineKeyboardButton(
-            "📢 Kanalga a’zo bo‘lish",
-            url="https://t.me/GreenleafRishton" # Bu yerda URL qoladi, bu tugma uchun
-        )
+        btn1 = InlineKeyboardButton("📢 Kanalga a’zo bo‘lish", url=CHANNEL_LINK)
         btn2 = InlineKeyboardButton("✅ Tekshirish", callback_data="check_sub")
         markup.add(btn1, btn2)
 
@@ -203,27 +252,31 @@ def generate_image(message):
     allowed, remaining = check_limit(user_id)
 
     if not allowed:
-        bot.send_message(message.chat.id, "❌ Bepul limit tugadi. Do'stlaringizni taklif qilib premium limit oling.")
+        bot.send_message(
+            message.chat.id, 
+            "❌ Limitingiz tugadi.\n\n"
+            "Do'stlaringizni taklif qilib bepul rasm oling (Havola /start buyrug'ida) yoki "
+            "darhol rasm chizdirish uchun /premium orqali paket sotib oling."
+        )
         return
 
     prompt = message.text
-    wait_msg = bot.send_message(message.chat.id, "⏳ Rasm yaratilmoqda, 15-20 soniya kutishingiz mumkin...")
+    wait_msg = bot.send_message(message.chat.id, "⏳ Rasm yaratilmoqda, biroz kuting...")
 
     try:
-        # 🔥 To'g'rilangan OpenAI API qismi
         response = client.images.generate(
-            model="dall-e-3", # Haqiqiy mavjud model 
+            model="dall-e-3", 
             prompt=prompt,
             size="1024x1024",
-            response_format="b64_json" # 🔥 Base64 formatida kutish buyrug'i
+            response_format="b64_json"
         )
 
         image_base64 = response.data[0].b64_json
         image_bytes = base64.b64decode(image_base64)
 
-        caption = f"💎 Qolgan premium: {remaining}" if remaining > 0 else ""
+        caption = f"💎 Qolgan premium limit: {remaining}" if remaining > 0 else ""
 
-        bot.delete_message(message.chat.id, wait_msg.message_id) # Kutish xabarini o'chirish
+        bot.delete_message(message.chat.id, wait_msg.message_id)
         bot.send_photo(
             message.chat.id,
             BytesIO(image_bytes),
@@ -233,18 +286,7 @@ def generate_image(message):
     except Exception as e:
         print(f"Rasm yaratish xatosi: {e}")
         bot.delete_message(message.chat.id, wait_msg.message_id)
-        bot.reply_to(message, "⚠️ Xatolik yuz berdi. Balki so'rovingizda taqiqlangan so'zlar bordir (DALL-E xavfsizlik filtri).")
-
-# ===== RECHECK SUB =====
-@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
-def recheck_subscription(call):
-    user_id = call.from_user.id
-
-    if check_subscription(user_id):
-        bot.answer_callback_query(call.id, "✅ A’zolik tasdiqlandi!")
-        bot.send_message(call.message.chat.id, "🎉 Endi botga rasm chizish uchun matn yozishingiz mumkin!")
-    else:
-        bot.answer_callback_query(call.id, "❌ Hali kanalga a’zo emassiz.", show_alert=True)
+        bot.reply_to(message, "⚠️ Xatolik yuz berdi. Iltimos, boshqa so'z bilan qayta urinib ko'ring.")
 
 # ===== WEBHOOK & FLASK =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
@@ -256,12 +298,11 @@ def webhook():
 
 @app.route("/")
 def home():
-    return "Bot muvaffaqiyatli ishlamoqda!", 200
+    return "Bot ishlayapti!", 200
 
 @app.route("/health")
 def health():
     return "OK", 200
 
 if __name__ == "__main__":
-    # Eslatma: Serverda ishlash uchun Webhookni Telegramga ulash kerak bo'ladi.
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
