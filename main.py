@@ -109,11 +109,52 @@ def add_paid(user_id, amount):
 # ===== START =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
+
+    args = message.text.split()
+
+    user_id = message.from_user.id
+
+    # Foydalanuvchi bazada bormi tekshiramiz
+    cursor.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,))
+    row = cursor.fetchone()
+
+    # Agar yangi user bo‘lsa
+    if row is None:
+
+        invited_by = None
+
+        # Referal link orqali kirgan bo‘lsa
+        if len(args) > 1:
+            try:
+                invited_by = int(args[1])
+            except:
+                invited_by = None
+
+        cursor.execute(
+            "INSERT INTO users (user_id, used, paid_remaining, invited_by) VALUES (?, ?, ?, ?)",
+            (user_id, 0, 0, invited_by)
+        )
+        conn.commit()
+
+        # Agar referal bo‘lsa bonus beramiz
+        if invited_by and invited_by != user_id:
+
+            cursor.execute(
+                "UPDATE users SET paid_remaining = paid_remaining + 1 WHERE user_id=?",
+                (invited_by,)
+            )
+            conn.commit()
+
+            bot.send_message(
+                invited_by,
+                "🎉 Siz referal orqali 1 ta bonus rasm oldingiz!"
+            )
+
     bot.reply_to(
         message,
-        "🎨 Salom!\n\n1 ta bepul rasm beriladi."
+        "🎨 Salom!\n\n1 ta bepul rasm beriladi.\n\n"
+        "Referal linkni do‘stlaringizga yuboring va bonus oling!"
     )
-
 # ===== IMAGE =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
