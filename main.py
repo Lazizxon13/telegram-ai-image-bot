@@ -35,7 +35,8 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
     used INTEGER DEFAULT 0,
-    paid_remaining INTEGER DEFAULT 0
+    paid_remaining INTEGER DEFAULT 0,
+    invited_by INTEGER DEFAULT NULL
 )
 """)
 conn.commit()
