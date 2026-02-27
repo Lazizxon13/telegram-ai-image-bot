@@ -20,7 +20,7 @@ if not OPENAI_API_KEY:
 # ===== SETTINGS =====
 FREE_LIMIT = 1
 ADMIN_ID = 601900410
-CHANNEL_USERNAME = "@oribjon_ai"   # 🔥 O'Z KANALINGNI YOZ
+CHANNEL_USERNAME = "https://t.me/GreenleafRishton"   # 🔥 O'Z KANALINGNI YOZ
 
 # ===== INIT =====
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -150,11 +150,13 @@ def start_message(message):
                 "🎉 Siz referal orqali 1 ta bonus rasm oldingiz!"
             )
 
-    bot.reply_to(
-        message,
-        "🎨 Salom!\n\n1 ta bepul rasm beriladi.\n\n"
-        "Referal linkni do‘stlaringizga yuboring va bonus oling!"
-    )
+   bot.reply_to(
+    message,
+    f"🎨 Salom!\n\n"
+    f"1 ta bepul rasm beriladi.\n\n"
+    f"🔗 Sizning referal linkingiz:\n"
+    f"https://t.me/https://t.me/suratyaratai_bot?start={user_id}"
+)
 # ===== IMAGE =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
