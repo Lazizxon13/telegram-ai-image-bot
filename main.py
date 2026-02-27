@@ -3,12 +3,15 @@ from openai import OpenAI
 import os
 import base64
 from io import BytesIO
+from flask import Flask, request
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 client = OpenAI(api_key=OPENAI_KEY)
+
+app = Flask(__name__)
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
@@ -35,4 +38,14 @@ def generate_image(message):
 
     bot.send_photo(message.chat.id, BytesIO(image_bytes))
 
-bot.infinity_polling()
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook():
+    json_string = request.get_data().decode("utf-8")
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "OK", 200
+
+if __name__ == "__main__":
+    bot.remove_webhook()
+    bot.set_webhook(url=os.getenv("WEBHOOK_URL") + "/" + BOT_TOKEN)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
