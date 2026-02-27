@@ -230,7 +230,7 @@ def handle_callbacks(call):
         )
         bot.send_message(call.message.chat.id, text)
         bot.answer_callback_query(call.id)
-# ===== CHEK FORWARD =====
+# ===== CHEK FORWARD (Yangi versiya - Tugmalar bilan) =====
 @bot.message_handler(content_types=['photo'])
 def forward_check(message):
     user_id = message.from_user.id
@@ -242,15 +242,81 @@ def forward_check(message):
         f"📛 Username: @{username if username else 'yo‘q'}"
     )
 
-    # Admin ga forward qilish
-    bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
-    bot.send_message(ADMIN_ID, caption)
+    markup = InlineKeyboardMarkup()
+    btn5 = InlineKeyboardButton("✅ 5 ta qo'shish", callback_data=f"admin_add_5_{user_id}")
+    btn20 = InlineKeyboardButton("✅ 20 ta qo'shish", callback_data=f"admin_add_20_{user_id}")
+    btn_reject = InlineKeyboardButton("❌ Rad etish", callback_data=f"admin_reject_{user_id}")
+    
+    markup.add(btn5, btn20)
+    markup.add(btn_reject)
+
+    bot.send_photo(
+        ADMIN_ID, 
+        message.photo[-1].file_id, 
+        caption=caption, 
+        reply_markup=markup
+    )
 
     bot.reply_to(
         message,
         "✅ Chek yuborildi. Admin tasdiqlagach, bot sizga xabar beradi."
     )
 
+# ===== ADMIN CALLBACK (Tasdiqlash yoki Rad etish) =====
+@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_"))
+def admin_check_handler(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "Siz admin emassiz!", show_alert=True)
+        return
+
+    data = call.data.split("_")
+    action = data[1]
+    
+    if action == "add":
+        amount = int(data[2])
+        target_id = int(data[3])
+        
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id FROM users WHERE user_id=?", (target_id,))
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    "INSERT INTO users (user_id, used, paid_remaining) VALUES (?, ?, ?)",
+                    (target_id, 0, amount)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE users SET paid_remaining = paid_remaining + ? WHERE user_id=?",
+                    (amount, target_id)
+                )
+            conn.commit()
+        
+        bot.edit_message_caption(
+            f"✅ {target_id} foydalanuvchiga {amount} ta limit qo'shildi.", 
+            chat_id=call.message.chat.id, 
+            message_id=call.message.message_id
+        )
+        
+        try:
+            bot.send_message(target_id, f"🎉 To'lov tasdiqlandi! Hisobingizga {amount} ta premium rasm qo'shildi. Boshlash uchun matn yozing.")
+        except:
+            pass
+
+    elif action == "reject":
+        target_id = int(data[2])
+        
+        bot.edit_message_caption(
+            f"❌ {target_id} foydalanuvchining cheki rad etildi.", 
+            chat_id=call.message.chat.id, 
+            message_id=call.message.message_id
+        )
+        
+        try:
+            bot.send_message(target_id, "❌ Kechirasiz, to'lov chekingiz tasdiqlanmadi. Iltimos, qaytadan urinib ko'ring yoki admin bilan bog'laning.")
+        except:
+            pass
+        
+    bot.answer_callback_query(call.id)
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
