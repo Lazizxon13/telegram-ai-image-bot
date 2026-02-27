@@ -136,7 +136,7 @@ def handle_buy(call):
             "💳 Karta: 8600 0366 8782 8503\n"
             "👤 Ism: ORIBJON\n\n"
             "To‘lov qilgandan so‘ng chekni shu yerga yuboring.\n"
-            f"🆔 Sizning ID: {601900410}"
+            f"🆔 Sizning ID: {https://t.me/ORIFFFFFFFFFF}"
         )
 
     elif call.data == "buy_20":
