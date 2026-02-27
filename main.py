@@ -195,9 +195,16 @@ def generate_image(message):
         image_base64 = response.data[0].b64_json
         image_bytes = base64.b64decode(image_base64)
 
+        # 👇 Premium qoldiqni ko‘rsatish
+        caption_text = ""
+
+        if remaining > 0:
+            caption_text = f"💎 Qolgan premium: {remaining} ta"
+
         bot.send_photo(
             message.chat.id,
-            BytesIO(image_bytes)
+            BytesIO(image_bytes),
+            caption=caption_text
         )
 
     except Exception as e:
