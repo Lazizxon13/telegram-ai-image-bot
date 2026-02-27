@@ -106,24 +106,19 @@ def add_paid(user_id, amount):
         )
     conn.commit()
 
-# ===== START =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
 
     args = message.text.split()
-
     user_id = message.from_user.id
 
-    # Foydalanuvchi bazada bormi tekshiramiz
     cursor.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,))
     row = cursor.fetchone()
 
-    # Agar yangi user bo‘lsa
     if row is None:
 
         invited_by = None
 
-        # Referal link orqali kirgan bo‘lsa
         if len(args) > 1:
             try:
                 invited_by = int(args[1])
@@ -136,9 +131,7 @@ def start_message(message):
         )
         conn.commit()
 
-        # Agar referal bo‘lsa bonus beramiz
         if invited_by and invited_by != user_id:
-
             cursor.execute(
                 "UPDATE users SET paid_remaining = paid_remaining + 1 WHERE user_id=?",
                 (invited_by,)
@@ -150,13 +143,13 @@ def start_message(message):
                 "🎉 Siz referal orqali 1 ta bonus rasm oldingiz!"
             )
 
-   bot.reply_to(
-    message,
-    f"🎨 Salom!\n\n"
-    f"1 ta bepul rasm beriladi.\n\n"
-    f"🔗 Sizning referal linkingiz:\n"
-    f"https://t.me/https://t.me/suratyaratai_bot?start={user_id}"
-)
+    bot.reply_to(
+        message,
+        f"🎨 Salom!\n\n"
+        f"1 ta bepul rasm beriladi.\n\n"
+        f"🔗 Sizning referal linkingiz:\n"
+        f"https://t.me/suratyaratai_bot?start={user_id}"
+    )
 # ===== IMAGE =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
