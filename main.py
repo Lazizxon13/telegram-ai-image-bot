@@ -218,7 +218,31 @@ def open_buy_menu(call):
     bot.answer_callback_query(call.id)
     buy_menu(call.message)
 
+# ===== CHEK FORWARD =====
+@bot.message_handler(content_types=['photo', 'document'])
+def forward_check(message):
 
+    user_id = message.from_user.id
+    username = message.from_user.username
+
+    # Admin ga forward
+    bot.forward_message(
+        ADMIN_ID,
+        message.chat.id,
+        message.message_id
+    )
+
+    bot.send_message(
+        ADMIN_ID,
+        f"💳 Yangi to‘lov cheki!\n\n"
+        f"👤 User ID: {user_id}\n"
+        f"📛 Username: @{username if username else 'yo‘q'}"
+    )
+
+    bot.reply_to(
+        message,
+        "✅ Chek admin ga yuborildi."
+    )
 # ===== WEBHOOK =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
