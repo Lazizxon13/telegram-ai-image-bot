@@ -128,31 +128,28 @@ def buy_menu(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("buy_"))
 def handle_buy(call):
 
+    user_id = call.from_user.id
+
     if call.data == "buy_5":
-        text = "💎 5 ta rasm — 10 000 so‘m\n\nTo‘lov uchun admin bilan bog‘laning."
+        text = (
+            "💎 5 ta rasm — 10 000 so‘m\n\n"
+            "💳 Karta: 8600 0366 8782 8503\n"
+            "👤 Ism: ORIBJON\n\n"
+            "To‘lov qilgandan so‘ng chekni shu yerga yuboring.\n"
+            f"🆔 Sizning ID: {601900410}"
+        )
+
     elif call.data == "buy_20":
-        text = "💎 20 ta rasm — 30 000 so‘m\n\nTo‘lov uchun admin bilan bog‘laning."
-    else:
-        text = "Xatolik."
+        text = (
+            "💎 20 ta rasm — 30 000 so‘m\n\n"
+            "💳 Karta: 8600 1234 5678 9012\n"
+            "👤 Ism: ORIBJON\n\n"
+            "To‘lov qilgandan so‘ng chekni shu yerga yuboring.\n"
+            f"🆔 Sizning ID: {user_id}"
+        )
 
     bot.answer_callback_query(call.id)
     bot.send_message(call.message.chat.id, text)
-# ===== ADMIN ADD =====
-@bot.message_handler(commands=['add'])
-def admin_add(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    parts = message.text.split()
-    if len(parts) != 3:
-        bot.reply_to(message, "Format: /add user_id amount")
-        return
-
-    user_id = int(parts[1])
-    amount = int(parts[2])
-
-    add_paid(user_id, amount)
-    bot.reply_to(message, f"{amount} ta premium qo‘shildi.")
 
 # ===== ADMIN STATS =====
 @bot.message_handler(commands=['stats'])
