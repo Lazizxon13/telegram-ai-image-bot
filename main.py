@@ -212,7 +212,10 @@ def handle_callbacks(call):
     elif call.data == "buy_5":
         text = (
             "💎 5 ta rasm — 10 000 so'm\n\n"
-            "To'lov uchun admin bilan bog'laning: @ORIFFFFFFFFFF"
+            "💳 Karta: 8600 0366 8782 8503\n"
+            "👤 Ism: ORIBJON\n\n"
+            "To'lov qilgandan so'ng chekni (skrinshotni) shu yerga yuboring.\n"
+            f"🆔 Sizning ID: {user_id}"
         )
         bot.send_message(call.message.chat.id, text)
         bot.answer_callback_query(call.id)
@@ -222,12 +225,11 @@ def handle_callbacks(call):
             "💎 20 ta rasm — 30 000 so'm\n\n"
             "💳 Karta: 8600 0366 8782 8503\n"
             "👤 Ism: ORIBJON\n\n"
-            "To'lov qilgandan so'ng chekni shu yerga yuboring.\n"
+            "To'lov qilgandan so'ng chekni (skrinshotni) shu yerga yuboring.\n"
             f"🆔 Sizning ID: {user_id}"
         )
         bot.send_message(call.message.chat.id, text)
         bot.answer_callback_query(call.id)
-
 # ===== CHEK FORWARD =====
 @bot.message_handler(content_types=['photo'])
 def forward_check(message):
