@@ -302,3 +302,97 @@ def forward_check(message):
     btn5 = InlineKeyboardButton("✅ 5 ta qo'shish", callback_data=f"admin_add_5_{user_id}")
     btn20 = InlineKeyboardButton("✅ 20 ta qo'shish", callback_data=f"admin_add_20_{user_id}")
     btn_reject = InlineKeyboardButton("❌ Rad etish", callback_data=f"admin_reject_{user_id}")
+    
+    markup.add(btn5, btn20)
+    markup.add(btn_reject)
+
+    bot.send_photo(
+        ADMIN_ID, 
+        message.photo[-1].file_id, 
+        caption=caption, 
+        reply_markup=markup
+    )
+
+    bot.reply_to(
+        message,
+        "✅ Chek yuborildi. Admin tasdiqlagach, bot sizga xabar beradi."
+    )
+
+# ===== IMAGE GENERATION =====
+@bot.message_handler(content_types=['text'])
+def generate_image(message):
+    if message.text.startswith('/'):
+        return
+
+    user_id = message.from_user.id
+
+    if not check_subscription(user_id):
+        markup = InlineKeyboardMarkup()
+        btn1 = InlineKeyboardButton("📢 Kanalga a’zo bo‘lish", url=CHANNEL_LINK)
+        btn2 = InlineKeyboardButton("✅ Tekshirish", callback_data="check_sub")
+        markup.add(btn1, btn2)
+
+        bot.send_message(
+            message.chat.id,
+            "❗ Botdan foydalanish uchun kanalimizga a’zo bo‘ling.",
+            reply_markup=markup
+        )
+        return
+
+    allowed, remaining = check_limit(user_id)
+
+    if not allowed:
+        bot.send_message(
+            message.chat.id, 
+            "❌ Limitingiz tugadi.\n\n"
+            "Do'stlaringizni taklif qilib bepul rasm oling (Havola /start buyrug'ida) yoki "
+            "darhol rasm chizdirish uchun /premium orqali paket sotib oling."
+        )
+        return
+
+    prompt = message.text
+    wait_msg = bot.send_message(message.chat.id, "⏳ Rasm yaratilmoqda, biroz kuting...")
+
+    try:
+        response = client.images.generate(
+            model="dall-e-3", 
+            prompt=prompt,
+            size="1024x1024",
+            response_format="b64_json"
+        )
+
+        image_base64 = response.data[0].b64_json
+        image_bytes = base64.b64decode(image_base64)
+
+        caption = f"💎 Qolgan premium limit: {remaining}" if remaining > 0 else ""
+
+        bot.delete_message(message.chat.id, wait_msg.message_id)
+        bot.send_photo(
+            message.chat.id,
+            BytesIO(image_bytes),
+            caption=caption
+        )
+
+    except Exception as e:
+        print(f"Rasm yaratish xatosi: {e}")
+        bot.delete_message(message.chat.id, wait_msg.message_id)
+        bot.reply_to(message, "⚠️ Xatolik yuz berdi. Iltimos, boshqa so'z bilan qayta urinib ko'ring.")
+
+# ===== WEBHOOK & FLASK =====
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook():
+    json_string = request.get_data().decode("utf-8")
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "OK", 200
+
+@app.route("/")
+def home():
+    return "Bot ishlayapti!", 200
+
+@app.route("/health")
+def health():
+    return "OK", 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
