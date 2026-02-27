@@ -104,12 +104,23 @@ def add_paid(user_id, amount):
 # ===== START =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.reply_to(
-        message,
-        "🎨 Salom!\n\n"
-        "1 ta bepul rasm beriladi.\n"
-        "Premium olish uchun /buy ni bosing."
+
+    cursor.execute(
+        "SELECT paid_remaining FROM users WHERE user_id=?",
+        (message.from_user.id,)
     )
+    row = cursor.fetchone()
+
+    if row and row[0] > 0:
+        bot.reply_to(
+            message,
+            f"🎨 Salom!\n\n💎 Sizda {row[0]} ta premium rasm mavjud."
+        )
+    else:
+        bot.reply_to(
+            message,
+            "🎨 Salom!\n\n1 ta bepul rasm beriladi.\nPremium olish uchun /buy ni bosing."
+        )
 
 
 # ===== BUY MENU =====
