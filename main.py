@@ -249,7 +249,6 @@ def forward_check(message):
         "✅ Chek yuborildi. Admin tasdiqlagach, bot sizga xabar beradi."
     )
 
-
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
