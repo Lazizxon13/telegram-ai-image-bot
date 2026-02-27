@@ -183,10 +183,33 @@ def generate_image(message):
 
     allowed, remaining = check_limit(user_id)
 
-    if not allowed:
-        bot.reply_to(message, "❌ Limit tugadi. Premium oling.")
-        return
+   if not allowed:
+    markup = InlineKeyboardMarkup()
+    btn = InlineKeyboardButton("💎 Premium olish", callback_data="open_buy")
+    markup.add(btn)
 
+    bot.send_message(
+        message.chat.id,
+        "❌ Limit tugadi.\nPremium olish uchun tugmani bosing 👇",
+        reply_markup=markup
+    )
+    return
+@bot.callback_query_handler(func=lambda call: call.data == "open_buy")
+def open_buy_menu(call):
+    markup = InlineKeyboardMarkup()
+
+    btn1 = InlineKeyboardButton("💎 5 rasm — 10 000 so‘m", callback_data="buy_5")
+    btn2 = InlineKeyboardButton("💎 20 rasm — 30 000 so‘m", callback_data="buy_20")
+
+    markup.add(btn1)
+    markup.add(btn2)
+
+    bot.answer_callback_query(call.id)
+    bot.send_message(
+        call.message.chat.id,
+        "💎 Premium paketni tanlang:",
+        reply_markup=markup
+    )
     prompt = message.text
 
     enhanced_prompt = f"""
