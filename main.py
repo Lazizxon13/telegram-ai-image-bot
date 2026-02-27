@@ -212,7 +212,7 @@ def handle_callbacks(call):
     elif call.data == "buy_5":
         text = (
             "💎 5 ta rasm — 10 000 so'm\n\n"
-            "To'lov uchun admin bilan bog'laning: @SizningYuzerneyingiz"
+            "To'lov uchun admin bilan bog'laning: @ORIFFFFFFFFFF"
         )
         bot.send_message(call.message.chat.id, text)
         bot.answer_callback_query(call.id)
