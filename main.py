@@ -17,6 +17,11 @@ if not BOT_TOKEN:
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY not found")
 
+# ===== SETTINGS =====
+FREE_LIMIT = 1
+ADMIN_ID = 601900410
+CHANNEL_USERNAME = "@oribjon_ai"   # 🔥 O'Z KANALINGNI YOZ
+
 # ===== INIT =====
 bot = telebot.TeleBot(BOT_TOKEN)
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -35,11 +40,15 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-FREE_LIMIT = 1
-ADMIN_ID = 601900410
-CHANNEL_USERNAME =  "https://t.me/GreenleafRishton"
+# ===== CHANNEL CHECK =====
+def check_subscription(user_id):
+    try:
+        member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        return member.status in ["member", "administrator", "creator"]
+    except:
+        return False
 
-# ===== LIMIT FUNCTION =====
+# ===== LIMIT CHECK =====
 def check_limit(user_id):
     cursor.execute(
         "SELECT used, paid_remaining FROM users WHERE user_id=?",
@@ -57,7 +66,6 @@ def check_limit(user_id):
 
     used, paid_remaining = row
 
-    # Premium ishlatish
     if paid_remaining > 0:
         cursor.execute(
             "UPDATE users SET paid_remaining=? WHERE user_id=?",
@@ -66,7 +74,6 @@ def check_limit(user_id):
         conn.commit()
         return True, paid_remaining - 1
 
-    # Free limit
     if used >= FREE_LIMIT:
         return False, 0
 
@@ -77,7 +84,6 @@ def check_limit(user_id):
     conn.commit()
 
     return True, 0
-
 
 # ===== ADD PREMIUM =====
 def add_paid(user_id, amount):
@@ -97,218 +103,99 @@ def add_paid(user_id, amount):
             "UPDATE users SET paid_remaining = paid_remaining + ? WHERE user_id=?",
             (amount, user_id)
         )
-
     conn.commit()
-
 
 # ===== START =====
 @bot.message_handler(commands=['start'])
 def start_message(message):
-
-    cursor.execute(
-        "SELECT paid_remaining FROM users WHERE user_id=?",
-        (message.from_user.id,)
-    )
-    row = cursor.fetchone()
-
-    if row and row[0] > 0:
-        bot.reply_to(
-            message,
-            f"🎨 Salom!\n\n💎 Sizda {row[0]} ta premium rasm mavjud."
-        )
-    else:
-        bot.reply_to(
-            message,
-            "🎨 Salom!\n\n1 ta bepul rasm beriladi.\nPremium olish uchun /buy ni bosing."
-        )
-
-
-# ===== BUY MENU =====
-@bot.message_handler(commands=['buy'])
-def buy_menu(message):
-    markup = InlineKeyboardMarkup()
-
-    btn1 = InlineKeyboardButton("💎 5 rasm — 10 000 so‘m", callback_data="buy_5")
-    btn2 = InlineKeyboardButton("💎 20 rasm — 30 000 so‘m", callback_data="buy_20")
-
-    markup.add(btn1)
-    markup.add(btn2)
-
-    bot.send_message(
-        message.chat.id,
-        "💎 Premium paketni tanlang:",
-        reply_markup=markup
+    bot.reply_to(
+        message,
+        "🎨 Salom!\n\n1 ta bepul rasm beriladi."
     )
 
-
-# ===== BUY CALLBACK =====
-@bot.callback_query_handler(func=lambda call: call.data.startswith("buy_"))
-def handle_buy(call):
-
-    user_id = call.from_user.id
-
-    if call.data == "buy_5":
-        text = (
-            "💎 5 ta rasm — 10 000 so‘m\n\n"
-            "💳 Karta: 8600 0366 8782 8503\n"
-            "👤 Ism: ORIBJON\n\n"
-            "To‘lovdan so‘ng chekni yuboring.\n"
-            f"🆔 Sizning ID: {user_id}"
-        )
-
-    elif call.data == "buy_20":
-        text = (
-            "💎 20 ta rasm — 30 000 so‘m\n\n"
-            "💳 Karta: 8600 0366 8782 8503\n"
-            "👤 Ism: ORIBJON\n\n"
-            "To‘lovdan so‘ng chekni yuboring.\n"
-            f"🆔 Sizning ID: {user_id}"
-        )
-
-    bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, text)
-
-
-# ===== IMAGE GENERATION =====
+# ===== IMAGE =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
 
     user_id = message.from_user.id
-    allowed, remaining = check_limit(user_id)
 
-    if not allowed:
+    # 🔥 KANAL MAJBURIY
+    if not check_subscription(user_id):
+
         markup = InlineKeyboardMarkup()
-        btn = InlineKeyboardButton("💎 Premium olish", callback_data="open_buy")
-        markup.add(btn)
+        btn1 = InlineKeyboardButton(
+            "📢 Kanalga a’zo bo‘lish",
+            url=f"https://t.me/{CHANNEL_USERNAME.replace('@','')}"
+        )
+        btn2 = InlineKeyboardButton(
+            "✅ Tekshirish",
+            callback_data="check_sub"
+        )
+
+        markup.add(btn1)
+        markup.add(btn2)
 
         bot.send_message(
             message.chat.id,
-            "❌ Limit tugadi.\nPremium olish uchun tugmani bosing 👇",
+            "❗ Botdan foydalanish uchun kanalga a’zo bo‘ling.",
             reply_markup=markup
+        )
+        return
+
+    allowed, remaining = check_limit(user_id)
+
+    if not allowed:
+        bot.send_message(
+            message.chat.id,
+            "❌ Limit tugadi. Premium oling."
         )
         return
 
     prompt = message.text
 
-    enhanced_prompt = f"""
-    Ultra high quality, professional photography,
-    cinematic lighting, detailed, sharp focus.
-    {prompt}
-    """
-
     try:
         response = client.images.generate(
             model="gpt-image-1",
-            prompt=enhanced_prompt,
+            prompt=prompt,
             size="1024x1024"
         )
 
         image_base64 = response.data[0].b64_json
         image_bytes = base64.b64decode(image_base64)
 
-        # 👇 Premium qoldiqni ko‘rsatish
-        caption_text = ""
-
+        caption = ""
         if remaining > 0:
-            caption_text = f"✨ Rasm tayyor!\n💎 Qolgan premium: {remaining} ta"
+            caption = f"💎 Qolgan premium: {remaining}"
 
         bot.send_photo(
             message.chat.id,
             BytesIO(image_bytes),
-            caption=caption_text
+            caption=caption
         )
 
     except Exception as e:
-        print("OPENAI ERROR:", e)
-        bot.reply_to(message, "⚠️ Rasm yaratishda xatolik.")
+        print(e)
+        bot.reply_to(message, "⚠️ Xatolik yuz berdi.")
 
+# ===== RECHECK SUB =====
+@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
+def recheck_subscription(call):
 
-# ===== OPEN BUY BUTTON =====
-@bot.callback_query_handler(func=lambda call: call.data == "open_buy")
-def open_buy_menu(call):
-    bot.answer_callback_query(call.id)
-    buy_menu(call.message)
+    user_id = call.from_user.id
 
-# ===== CHEK FORWARD + ADMIN BUTTON =====
-@bot.message_handler(content_types=['photo', 'document'])
-def forward_check(message):
-
-    user_id = message.from_user.id
-    username = message.from_user.username
-
-    markup = InlineKeyboardMarkup()
-    btn1 = InlineKeyboardButton(
-        "✅ 5 rasm berish",
-        callback_data=f"approve_5_{user_id}"
-    )
-    btn2 = InlineKeyboardButton(
-        "❌ Bekor qilish",
-        callback_data=f"reject_{user_id}"
-    )
-
-    markup.add(btn1)
-    markup.add(btn2)
-
-    # Admin ga forward
-    bot.forward_message(
-        ADMIN_ID,
-        message.chat.id,
-        message.message_id
-    )
-
-    bot.send_message(
-        ADMIN_ID,
-        f"💳 Yangi to‘lov!\n\n"
-        f"👤 ID: {user_id}\n"
-        f"📛 Username: @{username if username else 'yo‘q'}",
-        reply_markup=markup
-    )
-
-    bot.reply_to(
-        message,
-        "✅ Chek yuborildi. Admin tasdiqlaydi."
-    )
-    # ===== ADMIN APPROVE HANDLER =====
-@bot.callback_query_handler(func=lambda call: call.data.startswith("approve_") or call.data.startswith("reject_"))
-def admin_approve(call):
-
-    if call.from_user.id != ADMIN_ID:
-        return
-
-    data = call.data.split("_")
-
-    if data[0] == "approve":
-        amount = int(data[1])
-        user_id = int(data[2])
-
-        add_paid(user_id, amount)
-
+    if check_subscription(user_id):
+        bot.answer_callback_query(call.id, "✅ A’zo tasdiqlandi!")
         bot.send_message(
-            user_id,
-            f"🎉 To‘lov tasdiqlandi!\n💎 {amount} ta premium rasm qo‘shildi!"
-        )
-
-        bot.edit_message_text(
-            "✅ Tasdiqlandi va premium qo‘shildi.",
             call.message.chat.id,
-            call.message.message_id
+            "🎉 Endi botdan foydalanishingiz mumkin!"
+        )
+    else:
+        bot.answer_callback_query(
+            call.id,
+            "❌ Hali kanalga a’zo emassiz.",
+            show_alert=True
         )
 
-    elif data[0] == "reject":
-        user_id = int(data[1])
-
-        bot.send_message(
-            user_id,
-            "❌ To‘lov tasdiqlanmadi. Admin bilan bog‘laning."
-        )
-
-        bot.edit_message_text(
-            "❌ To‘lov bekor qilindi.",
-            call.message.chat.id,
-            call.message.message_id
-        )
-
-    bot.answer_callback_query(call.id)
 # ===== WEBHOOK =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
@@ -317,11 +204,9 @@ def webhook():
     bot.process_new_updates([update])
     return "OK", 200
 
-
 @app.route("/")
 def home():
     return "Bot ishlayapti", 200
-
 
 @app.route("/health")
 def health():
