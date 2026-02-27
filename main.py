@@ -227,7 +227,6 @@ def handle_callbacks(call):
         )
         bot.send_message(call.message.chat.id, text)
         bot.answer_callback_query(call.id)
-# ... (tepadagi kodlar, premium tugmalar va h.k.)
 
 # ===== CHEK FORWARD =====
 @bot.message_handler(content_types=['photo'])
@@ -250,10 +249,7 @@ def forward_check(message):
         "✅ Chek yuborildi. Admin tasdiqlagach, bot sizga xabar beradi."
     )
 
-# ===== IMAGE GENERATION =====
-@bot.message_handler(content_types=['text'])
-def generate_image(message):
-# ... (rasm chizish kodi)
+
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
