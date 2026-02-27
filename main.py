@@ -257,6 +257,47 @@ def forward_check(message):
         message,
         "✅ Chek yuborildi. Admin tasdiqlaydi."
     )
+    # ===== ADMIN APPROVE HANDLER =====
+@bot.callback_query_handler(func=lambda call: call.data.startswith("approve_") or call.data.startswith("reject_"))
+def admin_approve(call):
+
+    if call.from_user.id != ADMIN_ID:
+        return
+
+    data = call.data.split("_")
+
+    if data[0] == "approve":
+        amount = int(data[1])
+        user_id = int(data[2])
+
+        add_paid(user_id, amount)
+
+        bot.send_message(
+            user_id,
+            f"🎉 To‘lov tasdiqlandi!\n💎 {amount} ta premium rasm qo‘shildi!"
+        )
+
+        bot.edit_message_text(
+            "✅ Tasdiqlandi va premium qo‘shildi.",
+            call.message.chat.id,
+            call.message.message_id
+        )
+
+    elif data[0] == "reject":
+        user_id = int(data[1])
+
+        bot.send_message(
+            user_id,
+            "❌ To‘lov tasdiqlanmadi. Admin bilan bog‘laning."
+        )
+
+        bot.edit_message_text(
+            "❌ To‘lov bekor qilindi.",
+            call.message.chat.id,
+            call.message.message_id
+        )
+
+    bot.answer_callback_query(call.id)
 # ===== WEBHOOK =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
