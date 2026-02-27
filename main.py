@@ -162,7 +162,7 @@ def generate_image(message):
         markup = InlineKeyboardMarkup()
         btn1 = InlineKeyboardButton(
             "📢 Kanalga a’zo bo‘lish",
-            url=f"https://t.me/{CHANNEL_USERNAME.replace('@','')}"
+         url="https://t.me/GreenleafRishton"
         )
         btn2 = InlineKeyboardButton(
             "✅ Tekshirish",
