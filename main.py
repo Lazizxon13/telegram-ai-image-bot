@@ -220,14 +220,40 @@ def handle_callbacks(call):
     elif call.data == "buy_20":
         text = (
             "💎 20 ta rasm — 30 000 so'm\n\n"
-            "💳 Karta: 8600 1234 5678 9012\n"
+            "💳 Karta: 8600 0366 8782 8503\n"
             "👤 Ism: ORIBJON\n\n"
             "To'lov qilgandan so'ng chekni shu yerga yuboring.\n"
             f"🆔 Sizning ID: {user_id}"
         )
         bot.send_message(call.message.chat.id, text)
         bot.answer_callback_query(call.id)
+# ... (tepadagi kodlar, premium tugmalar va h.k.)
 
+# ===== CHEK FORWARD =====
+@bot.message_handler(content_types=['photo'])
+def forward_check(message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+
+    caption = (
+        f"💳 Yangi to‘lov cheki!\n\n"
+        f"👤 User ID: {user_id}\n"
+        f"📛 Username: @{username if username else 'yo‘q'}"
+    )
+
+    # Admin ga forward qilish
+    bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
+    bot.send_message(ADMIN_ID, caption)
+
+    bot.reply_to(
+        message,
+        "✅ Chek yuborildi. Admin tasdiqlagach, bot sizga xabar beradi."
+    )
+
+# ===== IMAGE GENERATION =====
+@bot.message_handler(content_types=['text'])
+def generate_image(message):
+# ... (rasm chizish kodi)
 # ===== IMAGE GENERATION =====
 @bot.message_handler(content_types=['text'])
 def generate_image(message):
