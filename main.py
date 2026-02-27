@@ -65,20 +65,25 @@ def generate_image(message):
 
     enhanced_prompt = f"""
     Ultra high quality, professional photography,
-    cinematic lighting, detailed, sharp focus, 4k resolution.
+    cinematic lighting, detailed, sharp focus.
     {prompt}
     """
 
-    response = client.images.generate(
-        model="gpt-image-1",
-        prompt=enhanced_prompt,
-        size="1024x1024"
-    )
+    try:
+        response = client.images.generate(
+            model="gpt-image-1",
+            prompt=enhanced_prompt,
+            size="1024x1024"
+        )
 
-    image_base64 = response.data[0].b64_json
-    image_bytes = base64.b64decode(image_base64)
+        image_base64 = response.data[0].b64_json
+        image_bytes = base64.b64decode(image_base64)
 
-    bot.send_photo(message.chat.id, BytesIO(image_bytes))
+        bot.send_photo(message.chat.id, BytesIO(image_bytes))
+
+    except Exception as e:
+        print("OPENAI ERROR:", e)
+        bot.reply_to(message, "⚠️ Rasm yaratishda xatolik.")
 
 # ===== WEBHOOK =====
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
