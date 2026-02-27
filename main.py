@@ -55,6 +55,4 @@ def webhook():
 def home():
     return "OK", 200
 
-@app.route("/health")
-def health():
-    return "OK", 200
+
