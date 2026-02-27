@@ -37,7 +37,7 @@ conn.commit()
 
 FREE_LIMIT = 1
 ADMIN_ID = 601900410
-
+CHANNEL_USERNAME =  "https://t.me/GreenleafRishton"
 
 # ===== LIMIT FUNCTION =====
 def check_limit(user_id):
